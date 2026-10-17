@@ -1,6 +1,8 @@
-# lolis_jose_access
+# App_AccessBoda
 
-A new Flutter project.
+Aplicacion para validar entradas de accesos de boda.
+
+Proyecto Flutter: `lolis_jose_access`.
 
 ## Getting Started
 
