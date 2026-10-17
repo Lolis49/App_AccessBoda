@@ -106,12 +106,21 @@ class _ImportGuestsScreenState
           const SizedBox(height: 12),
 
           const Text(
-            'Selecciona un archivo JSON con los '
+            'Selecciona un archivo Excel (.xlsx) con los '
             'folios y datos de tus invitados.',
             textAlign: TextAlign.center,
           ),
 
           const SizedBox(height: 25),
+
+          const Text(
+            'Primera hoja con datos: encabezados Folio, Nombre, Adultos, '
+            'Niños y Mesa. Una invitación por fila. '
+            'Mesa puede quedar vacía; conserva la asignación existente. '
+            'Usa cantidades enteras y folios de 8 letras o números '
+            '(formato de celda Texto para conservar ceros iniciales).',
+          ),
+          const SizedBox(height: 16),
 
           Card(
             color: const Color(0xFFF5EFEB),
@@ -158,7 +167,7 @@ class _ImportGuestsScreenState
             label: Text(
               _importing
                   ? 'Importando...'
-                  : 'Seleccionar archivo JSON',
+                  : 'Seleccionar archivo Excel',
             ),
             style: FilledButton.styleFrom(
               backgroundColor: const Color(0xFF806A61),

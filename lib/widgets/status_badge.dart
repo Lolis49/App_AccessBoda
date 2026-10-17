@@ -1,24 +1,37 @@
 
 import 'package:flutter/material.dart';
+
+import '../models/guest.dart';
 import '../theme/app_theme.dart';
 
 class StatusBadge extends StatelessWidget {
-  final bool used;
+  final GuestStatus status;
 
   const StatusBadge({
     super.key,
-    required this.used,
+    required this.status,
   });
 
   @override
   Widget build(BuildContext context) {
-    final color = used
-        ? AppColors.warning
-        : AppColors.success;
+    final String label;
+    final Color color;
+
+    switch (status) {
+      case GuestStatus.pending:
+        label = 'Pendiente';
+        color = AppColors.muted;
+      case GuestStatus.partial:
+        label = 'Parcial';
+        color = AppColors.warning;
+      case GuestStatus.complete:
+        label = 'Completo';
+        color = AppColors.success;
+    }
 
     return Container(
       padding: const EdgeInsets.symmetric(
-        horizontal: 10,
+        horizontal: 11,
         vertical: 7,
       ),
       decoration: BoxDecoration(
@@ -26,7 +39,7 @@ class StatusBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(30),
       ),
       child: Text(
-        used ? 'Utilizado' : 'Disponible',
+        label,
         style: TextStyle(
           color: color,
           fontSize: 11,

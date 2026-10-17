@@ -1,4 +1,3 @@
-
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -6,17 +5,17 @@ import 'package:file_picker/file_picker.dart';
 
 import '../models/guest.dart';
 import 'database_service.dart';
+import 'guest_excel_converter.dart';
 
 import '../models/import_result.dart';
 
 class GuestImportService {
-  static final RegExp _codePattern =
-      RegExp(r'^[A-Z0-9]{8}$');
+  static final RegExp _codePattern = RegExp(r'^[A-Z0-9]{8}$');
 
   Future<ImportResult?> pickAndImport() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: ['json'],
+      allowedExtensions: ['xlsx'],
       withData: true,
       allowMultiple: false,
     );
@@ -42,17 +41,17 @@ class GuestImportService {
       );
     }
 
-    final String content;
-
-    try {
-      content = utf8.decode(bytes);
-    } on FormatException {
+    if (file.extension?.toLowerCase() != 'xlsx') {
       throw const FormatException(
-        'El archivo debe estar codificado en UTF-8.',
+        'Selecciona un archivo Excel con extensión .xlsx.',
       );
     }
 
-    return importFromJson(content);
+    return importFromExcel(bytes);
+  }
+
+  Future<ImportResult> importFromExcel(List<int> bytes) {
+    return importFromJson(GuestExcelConverter.toJson(bytes));
   }
 
   Future<ImportResult> importFromJson(
@@ -142,6 +141,7 @@ class GuestImportService {
           name: name.trim(),
           adults: adults,
           children: children,
+          tableNumber: Guest.parseTableNumber(value['mesa']),
         ),
       );
     }

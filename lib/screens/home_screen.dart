@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 
 import '../models/guest.dart';
@@ -10,6 +9,7 @@ import '../widgets/status_badge.dart';
 import 'guest_detail_screen.dart';
 import 'scanner_screen.dart';
 import 'import_guests_screen.dart';
+import 'statistics_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -19,8 +19,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final TextEditingController _searchController =
-      TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
 
   List<Guest> _guests = [];
   Map<String, int> _stats = {};
@@ -93,6 +92,14 @@ class _HomeScreenState extends State<HomeScreen> {
     if (mounted) await _loadData();
   }
 
+  Future<void> _openStatistics() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const StatisticsScreen()),
+    );
+    if (mounted) await _loadData();
+  }
+
   Future<void> _openGuest(Guest guest) async {
     await Navigator.push(
       context,
@@ -149,9 +156,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildSummary() {
-    final total = _stats['total_passes'] ?? 0;
-    final used = _stats['used_passes'] ?? 0;
-
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -173,34 +177,59 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(height: 15),
-          Row(
-            children: [
-              Expanded(
-                child: StatCard(
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final total = _stats['total_passes'] ?? 0;
+              final complete = _stats['used_passes'] ?? 0;
+              final partial = _stats['partial_passes'] ?? 0;
+              final pending = total - complete - partial;
+
+              final cards = [
+                StatCard(
                   label: 'Pases',
                   value: total,
                   icon: Icons.confirmation_number_outlined,
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: StatCard(
-                  label: 'Utilizados',
-                  value: used,
+                StatCard(
+                  label: 'Completos',
+                  value: complete,
                   icon: Icons.check_circle_outline,
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: StatCard(
+                StatCard(
+                  label: 'Parciales',
+                  value: partial,
+                  icon: Icons.group_outlined,
+                ),
+                StatCard(
                   label: 'Pendientes',
-                  value: total - used,
+                  value: pending,
                   icon: Icons.schedule,
                 ),
-              ),
-            ],
+              ];
+
+              final width = (constraints.maxWidth - 10) / 2;
+
+              return Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: cards
+                    .map(
+                      (card) => SizedBox(
+                        width: width,
+                        child: card,
+                      ),
+                    )
+                    .toList(),
+              );
+            },
           ),
           const SizedBox(height: 18),
+          OutlinedButton.icon(
+            onPressed: _openStatistics,
+            icon: const Icon(Icons.bar_chart),
+            label: const Text('Ver panel de estadísticas'),
+          ),
+          const SizedBox(height: 10),
           FilledButton.icon(
             onPressed: _openScanner,
             icon: const Icon(Icons.qr_code_scanner),
@@ -232,16 +261,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   guest.used
                       ? Icons.check_circle_outline
                       : Icons.people_outline,
-                  color: guest.used
-                      ? AppColors.success
-                      : AppColors.primary,
+                  color: guest.used ? AppColors.success : AppColors.primary,
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       guest.name,
@@ -261,15 +287,32 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 5),
                     Text(
-                      '${guest.adults} adultos · '
-                      '${guest.children} niños',
+                      '${guest.totalCheckedIn} de '
+                      '${guest.totalPeople} personas ingresaron',
                       style: const TextStyle(
                         color: AppColors.muted,
                         fontSize: 12,
                       ),
                     ),
                     const SizedBox(height: 8),
-                    StatusBadge(used: guest.used),
+                    StatusBadge(status: guest.status),
+                    const SizedBox(height: 8),
+                    Text(
+                      '${guest.adults} adultos · ${guest.children} niños',
+                      style: const TextStyle(
+                        color: AppColors.muted,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      'Mesa: ${guest.tableLabel}',
+                      style: const TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -303,23 +346,29 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             onPressed: _openImport,
           ),
+          IconButton(
+            tooltip: 'Reiniciar pruebas',
+            icon: const Icon(Icons.restart_alt),
+            onPressed: _resetTestData,
+          ),
           const SizedBox(width: 8),
         ],
       ),
       body: RefreshIndicator(
         onRefresh: _loadData,
         child: ListView(
-          keyboardDismissBehavior:
-              ScrollViewKeyboardDismissBehavior.onDrag,
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           padding: const EdgeInsets.fromLTRB(
-            18, 18, 18, 32,
+            18,
+            18,
+            18,
+            32,
           ),
           children: [
             _buildHeader(),
             const SizedBox(height: 25),
             _buildSummary(),
             const SizedBox(height: 28),
-
             const Text(
               'Lista de invitados',
               style: TextStyle(
@@ -329,7 +378,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             const SizedBox(height: 13),
-
             TextField(
               controller: _searchController,
               onChanged: (_) => _loadData(),
@@ -347,9 +395,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-
             const SizedBox(height: 18),
-
             if (_loading)
               const Padding(
                 padding: EdgeInsets.all(24),
@@ -394,5 +440,55 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _resetTestData() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Reiniciar pruebas'),
+        content: const Text(
+          '¿Deseas borrar todas las entradas '
+          'registradas y su historial?\n\n'
+          'La lista de invitados se conservará.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Reiniciar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      await DatabaseService.instance.resetAllCheckIns();
+
+      await _loadData();
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Registros reiniciados correctamente',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al reiniciar: $e'),
+        ),
+      );
+    }
   }
 }
