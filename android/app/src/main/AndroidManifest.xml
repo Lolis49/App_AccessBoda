@@ -1,6 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 <uses-permission android:name="android.permission.CAMERA" />
     <application
+        android:allowBackup="false"
         android:label="lolis_jose_access"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">

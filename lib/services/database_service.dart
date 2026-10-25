@@ -5,6 +5,7 @@ import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../models/guest.dart';
+import 'admin_security_service.dart';
 import '../models/attendance_statistics.dart';
 import '../models/import_result.dart';
 import '../models/check_in_event.dart';
@@ -269,8 +270,14 @@ class DatabaseService {
   }
 
   Future<ImportResult> importGuests(
-    List<Guest> guests,
-  ) async {
+    List<Guest> guests, {
+    required AdminAuthorization authorization,
+  }) async {
+    AdminSecurityService.instance.requireAuthorization(
+      authorization,
+      AdminAction.importGuests,
+      consume: true,
+    );
     final db = await database;
 
     return db.transaction((txn) async {
@@ -437,25 +444,30 @@ class DatabaseService {
 
     return rows.map(CheckInEvent.fromMap).toList();
   }
-  
-Future<void> resetAllCheckIns() async {
-  final db = await database;
 
-  await db.transaction((txn) async {
-    // Eliminar el historial de entradas.
-    await txn.delete('check_in_events');
-
-    // Reiniciar todos los pases.
-    await txn.update(
-      'guests',
-      {
-        'checked_in_adults': 0,
-        'checked_in_children': 0,
-        'used': 0,
-        'checked_in_at': null,
-      },
+  Future<void> resetAllCheckIns(
+      {required AdminAuthorization authorization}) async {
+    AdminSecurityService.instance.requireAuthorization(
+      authorization,
+      AdminAction.resetCheckIns,
+      consume: true,
     );
-  });
-}
+    final db = await database;
 
+    await db.transaction((txn) async {
+      // Eliminar el historial de entradas.
+      await txn.delete('check_in_events');
+
+      // Reiniciar todos los pases.
+      await txn.update(
+        'guests',
+        {
+          'checked_in_adults': 0,
+          'checked_in_children': 0,
+          'used': 0,
+          'checked_in_at': null,
+        },
+      );
+    });
+  }
 }

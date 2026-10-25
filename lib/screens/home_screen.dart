@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../models/guest.dart';
 import '../services/database_service.dart';
+import '../services/admin_security_service.dart';
+import '../widgets/admin_pin_dialog.dart';
 import '../theme/app_theme.dart';
 import '../widgets/stat_card.dart';
 import '../widgets/status_badge.dart';
@@ -27,6 +29,17 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _loading = true;
   String? _error;
   int _requestId = 0;
+  bool _adminBusy = false;
+
+  Future<void> _managePin() async {
+    if (_adminBusy) return;
+    setState(() => _adminBusy = true);
+    try {
+      await manageAdminPin(context);
+    } finally {
+      if (mounted) setState(() => _adminBusy = false);
+    }
+  }
 
   @override
   void initState() {
@@ -340,6 +353,11 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         actions: [
           IconButton(
+            tooltip: 'Configurar o cambiar PIN de administrador',
+            icon: const Icon(Icons.admin_panel_settings_outlined),
+            onPressed: _adminBusy ? null : _managePin,
+          ),
+          IconButton(
             tooltip: 'Importar invitados',
             icon: const Icon(
               Icons.file_upload_outlined,
@@ -349,7 +367,7 @@ class _HomeScreenState extends State<HomeScreen> {
           IconButton(
             tooltip: 'Reiniciar pruebas',
             icon: const Icon(Icons.restart_alt),
-            onPressed: _resetTestData,
+            onPressed: _adminBusy ? null : _resetTestData,
           ),
           const SizedBox(width: 8),
         ],
@@ -443,6 +461,20 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _resetTestData() async {
+    if (_adminBusy) return;
+    setState(() => _adminBusy = true);
+    try {
+      await _authorizeAndResetTestData();
+    } finally {
+      if (mounted) setState(() => _adminBusy = false);
+    }
+  }
+
+  Future<void> _authorizeAndResetTestData() async {
+    final authorization = await requestAdminAuthorization(context,
+        action: AdminAction.resetCheckIns,
+        reason: 'Autorizar el borrado de entradas registradas y su historial');
+    if (authorization == null || !mounted) return;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -468,7 +500,8 @@ class _HomeScreenState extends State<HomeScreen> {
     if (confirmed != true || !mounted) return;
 
     try {
-      await DatabaseService.instance.resetAllCheckIns();
+      await DatabaseService.instance
+          .resetAllCheckIns(authorization: authorization);
 
       await _loadData();
 

@@ -5,6 +5,7 @@ import 'package:file_picker/file_picker.dart';
 
 import '../models/guest.dart';
 import 'database_service.dart';
+import 'admin_security_service.dart';
 import 'guest_excel_converter.dart';
 
 import '../models/import_result.dart';
@@ -12,7 +13,10 @@ import '../models/import_result.dart';
 class GuestImportService {
   static final RegExp _codePattern = RegExp(r'^[A-Z0-9]{8}$');
 
-  Future<ImportResult?> pickAndImport() async {
+  Future<ImportResult?> pickAndImport(
+      {required AdminAuthorization authorization}) async {
+    AdminSecurityService.instance
+        .requireAuthorization(authorization, AdminAction.importGuests);
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['xlsx'],
@@ -47,16 +51,23 @@ class GuestImportService {
       );
     }
 
-    return importFromExcel(bytes);
+    return importFromExcel(bytes, authorization: authorization);
   }
 
-  Future<ImportResult> importFromExcel(List<int> bytes) {
-    return importFromJson(GuestExcelConverter.toJson(bytes));
+  Future<ImportResult> importFromExcel(List<int> bytes,
+      {required AdminAuthorization authorization}) {
+    AdminSecurityService.instance
+        .requireAuthorization(authorization, AdminAction.importGuests);
+    return importFromJson(GuestExcelConverter.toJson(bytes),
+        authorization: authorization);
   }
 
   Future<ImportResult> importFromJson(
-    String content,
-  ) async {
+    String content, {
+    required AdminAuthorization authorization,
+  }) async {
+    AdminSecurityService.instance
+        .requireAuthorization(authorization, AdminAction.importGuests);
     dynamic decoded;
 
     try {
@@ -150,6 +161,7 @@ class GuestImportService {
     // de modificar la base de datos.
     return DatabaseService.instance.importGuests(
       guests,
+      authorization: authorization,
     );
   }
 }

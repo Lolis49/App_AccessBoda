@@ -1,21 +1,19 @@
-
 import 'package:flutter/material.dart';
 
 import '../models/import_result.dart';
 import '../services/guest_import_service.dart';
+import '../services/admin_security_service.dart';
+import '../widgets/admin_pin_dialog.dart';
 
 class ImportGuestsScreen extends StatefulWidget {
   const ImportGuestsScreen({super.key});
 
   @override
-  State<ImportGuestsScreen> createState() =>
-      _ImportGuestsScreenState();
+  State<ImportGuestsScreen> createState() => _ImportGuestsScreenState();
 }
 
-class _ImportGuestsScreenState
-    extends State<ImportGuestsScreen> {
-  final GuestImportService _importService =
-      GuestImportService();
+class _ImportGuestsScreenState extends State<ImportGuestsScreen> {
+  final GuestImportService _importService = GuestImportService();
 
   bool _importing = false;
   ImportResult? _result;
@@ -31,7 +29,13 @@ class _ImportGuestsScreenState
     });
 
     try {
-      final result = await _importService.pickAndImport();
+      final authorization = await requestAdminAuthorization(context,
+          action: AdminAction.importGuests,
+          reason:
+              'Autorizar la importación y actualización de invitados desde Excel');
+      if (authorization == null || !mounted) return;
+      final result =
+          await _importService.pickAndImport(authorization: authorization);
 
       if (!mounted) return;
 
@@ -42,9 +46,11 @@ class _ImportGuestsScreenState
       if (!mounted) return;
 
       setState(() {
-        _error = e is FormatException
+        _error = e is AdminPinException
             ? e.message
-            : 'No se pudo importar el archivo: $e';
+            : e is FormatException
+                ? e.message
+                : 'No se pudo importar el archivo: $e';
       });
     } finally {
       if (mounted) {
@@ -85,15 +91,12 @@ class _ImportGuestsScreenState
         padding: const EdgeInsets.all(20),
         children: [
           const SizedBox(height: 20),
-
           const Icon(
             Icons.file_upload_outlined,
             size: 75,
             color: Color(0xFF806A61),
           ),
-
           const SizedBox(height: 20),
-
           const Text(
             'Actualizar lista de invitados',
             textAlign: TextAlign.center,
@@ -102,17 +105,13 @@ class _ImportGuestsScreenState
               fontWeight: FontWeight.bold,
             ),
           ),
-
           const SizedBox(height: 12),
-
           const Text(
             'Selecciona un archivo Excel (.xlsx) con los '
-            'folios y datos de tus invitados.',
+            'folios y datos de tus invitados. Se requiere el PIN de administrador.',
             textAlign: TextAlign.center,
           ),
-
           const SizedBox(height: 25),
-
           const Text(
             'Primera hoja con datos: encabezados Folio, Nombre, Adultos, '
             'Niños y Mesa. Una invitación por fila. '
@@ -121,7 +120,6 @@ class _ImportGuestsScreenState
             '(formato de celda Texto para conservar ceros iniciales).',
           ),
           const SizedBox(height: 16),
-
           Card(
             color: const Color(0xFFF5EFEB),
             child: const Padding(
@@ -150,9 +148,7 @@ class _ImportGuestsScreenState
               ),
             ),
           ),
-
           const SizedBox(height: 24),
-
           FilledButton.icon(
             onPressed: _importing ? null : _selectFile,
             icon: _importing
@@ -165,16 +161,13 @@ class _ImportGuestsScreenState
                   )
                 : const Icon(Icons.folder_open),
             label: Text(
-              _importing
-                  ? 'Importando...'
-                  : 'Seleccionar archivo Excel',
+              _importing ? 'Importando...' : 'Seleccionar archivo Excel',
             ),
             style: FilledButton.styleFrom(
               backgroundColor: const Color(0xFF806A61),
               padding: const EdgeInsets.all(18),
             ),
           ),
-
           if (_error != null) ...[
             const SizedBox(height: 20),
             Card(
@@ -190,10 +183,8 @@ class _ImportGuestsScreenState
               ),
             ),
           ],
-
           if (_result != null) ...[
             const SizedBox(height: 24),
-
             Card(
               color: Colors.green.shade50,
               child: Padding(
@@ -205,9 +196,7 @@ class _ImportGuestsScreenState
                       size: 50,
                       color: Colors.green,
                     ),
-
                     const SizedBox(height: 10),
-
                     const Text(
                       'Importación completada',
                       style: TextStyle(
@@ -215,21 +204,17 @@ class _ImportGuestsScreenState
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-
                     const SizedBox(height: 15),
-
                     _resultRow(
                       'Nuevos',
                       _result!.inserted,
                       Icons.person_add_alt,
                     ),
-
                     _resultRow(
                       'Actualizados',
                       _result!.updated,
                       Icons.update,
                     ),
-
                     _resultRow(
                       'Sin cambios',
                       _result!.unchanged,
@@ -239,9 +224,7 @@ class _ImportGuestsScreenState
                 ),
               ),
             ),
-
             const SizedBox(height: 20),
-
             OutlinedButton.icon(
               onPressed: () {
                 Navigator.pop(context, true);
